@@ -7,7 +7,7 @@ the same dataset with a single command. No deep learning, no cloud, no complexit
 ## Installation
 
 ```bash
-pip install rival
+pip install rivalml
 ```
 
 For XGBoost support:
