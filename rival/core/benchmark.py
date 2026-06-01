@@ -26,6 +26,7 @@ class Benchmark:
     test_size: float = 0.2
     random_state: int = 42
     missing_strategy: str = "fill_mean"
+    metric_names: list[str] = field(default_factory=list)
 
     def run(self) -> list[BenchmarkResult]:
         set_global_seed(self.random_state)
@@ -42,6 +43,8 @@ class Benchmark:
 
         results: list[BenchmarkResult] = []
 
+        names = self.metric_names if self.metric_names else None
+
         for name in self.model_names:
             try:
                 model = get_model(name, random_state=self.random_state)
@@ -50,14 +53,14 @@ class Benchmark:
                     continue
 
                 train(model, X_train, y_train)
-                metrics = evaluate(model, X_test, y_test)
+                metrics = evaluate(model, X_test, y_test, metric_names=names)
 
                 results.append(BenchmarkResult(
-                    model_name=name,
-                    accuracy=round(metrics["accuracy"], 4),
-                    precision=round(metrics["precision"], 4),
-                    recall=round(metrics["recall"], 4),
-                    f1=round(metrics["f1"], 4),
+                    model_name=model.name,
+                    accuracy=round(metrics.get("accuracy", 0), 4),
+                    precision=round(metrics.get("precision", 0), 4),
+                    recall=round(metrics.get("recall", 0), 4),
+                    f1=round(metrics.get("f1", 0), 4),
                     latency_ms=round(metrics["latency_ms"], 1),
                 ))
             except Exception:

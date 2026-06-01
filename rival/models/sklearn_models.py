@@ -76,6 +76,13 @@ class XGBoostAdapter:
         return self._le.inverse_transform(preds)
 
 
+MODEL_ALIASES = {
+    "logistic_regression": "lr",
+    "random_forest": "rf",
+    "xgboost": "xgb",
+}
+
+
 def get_model(name: str, random_state: int = 42):
     registry = {
         "lr": LogisticRegressionAdapter,
@@ -83,6 +90,7 @@ def get_model(name: str, random_state: int = 42):
         "xgb": XGBoostAdapter,
     }
     name = name.lower().strip()
+    name = MODEL_ALIASES.get(name, name)
     if name not in registry:
         raise ValueError(
             f"unknown model '{name}'. available: {', '.join(registry.keys())}"

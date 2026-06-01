@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rivalml"
-version = "0.1.0"
+version = "0.2.1"
 description = "Lightweight ML benchmarking tool for reproducible model comparison"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -18,7 +18,8 @@ dependencies = [
   "scikit-learn",
   "numpy",
   "typer",
-  "tabulate"
+  "tabulate",
+  "pyyaml"
 ]
 
 [project.scripts]

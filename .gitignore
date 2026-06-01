@@ -13,3 +13,12 @@ venv/
 .vscode/
 .idea/
 .python-version
+
+test_data.csv
+results.json
+*.log
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
