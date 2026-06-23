@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 
 from rival.core.dataset import Dataset
 from rival.core.evaluator import evaluate
+from rival.core.registry import get_model
 from rival.core.trainer import train
-from rival.models.sklearn_models import get_model
 from rival.utils.seed import set_global_seed
 
 
@@ -22,7 +22,7 @@ class BenchmarkResult:
 class Benchmark:
     dataset_path: str
     target: str
-    model_names: list[str] = field(default_factory=lambda: ["lr", "rf"])
+    model_names: list[str] = field(default_factory=lambda: ["logistic_regression", "random_forest"])
     test_size: float = 0.2
     random_state: int = 42
     missing_strategy: str = "fill_mean"
@@ -65,5 +65,19 @@ class Benchmark:
                 ))
             except Exception:
                 continue
+
+        if results:
+            try:
+                from rival.history.history_manager import HistoryManager
+                primary_metric = self.metric_names[0] if self.metric_names else "f1"
+                HistoryManager.save(
+                    dataset_path=self.dataset_path,
+                    target=self.target,
+                    model_names=self.model_names,
+                    results=results,
+                    primary_metric=primary_metric,
+                )
+            except Exception:
+                pass
 
         return results

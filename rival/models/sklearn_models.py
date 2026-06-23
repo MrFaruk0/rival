@@ -2,14 +2,17 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 
+from rival.core.registry import register_model, get_model
 
+
+@register_model("logistic_regression")
 class LogisticRegressionAdapter:
     def __init__(self, random_state: int = 42):
         self.model = LogisticRegression(
             max_iter=2000,
             random_state=random_state,
         )
-        self.name = "lr"
+        self.name = "logistic_regression"
 
     def fit(self, X_train, y_train):
         self._le = LabelEncoder()
@@ -22,13 +25,14 @@ class LogisticRegressionAdapter:
         return self._le.inverse_transform(preds)
 
 
+@register_model("random_forest")
 class RandomForestAdapter:
     def __init__(self, random_state: int = 42):
         self.model = RandomForestClassifier(
             n_estimators=100,
             random_state=random_state,
         )
-        self.name = "rf"
+        self.name = "random_forest"
 
     def fit(self, X_train, y_train):
         self._le = LabelEncoder()
@@ -41,10 +45,11 @@ class RandomForestAdapter:
         return self._le.inverse_transform(preds)
 
 
+@register_model("xgboost")
 class XGBoostAdapter:
     def __init__(self, random_state: int = 42):
         self.model = None
-        self.name = "xgb"
+        self.name = "xgboost"
         self.random_state = random_state
         self._available = False
         self._error = None
@@ -77,22 +82,10 @@ class XGBoostAdapter:
 
 
 MODEL_ALIASES = {
-    "logistic_regression": "lr",
-    "random_forest": "rf",
-    "xgboost": "xgb",
+    "logistic_regression": "logistic_regression",
+    "random_forest": "random_forest",
+    "xgboost": "xgboost",
+    "lr": "logistic_regression",
+    "rf": "random_forest",
+    "xgb": "xgboost",
 }
-
-
-def get_model(name: str, random_state: int = 42):
-    registry = {
-        "lr": LogisticRegressionAdapter,
-        "rf": RandomForestAdapter,
-        "xgb": XGBoostAdapter,
-    }
-    name = name.lower().strip()
-    name = MODEL_ALIASES.get(name, name)
-    if name not in registry:
-        raise ValueError(
-            f"unknown model '{name}'. available: {', '.join(registry.keys())}"
-        )
-    return registry[name](random_state=random_state)

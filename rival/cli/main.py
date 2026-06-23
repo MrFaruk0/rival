@@ -6,6 +6,8 @@ import typer
 from rival.core.benchmark import Benchmark
 from rival.core.config import load_config
 from rival.core.experiment import Experiment
+from rival.history.history_manager import HistoryManager
+from rival.history.leaderboard import compute_leaderboard
 
 app = typer.Typer(
     name="rival",
@@ -76,7 +78,7 @@ def run(
     config: Optional[str] = typer.Option(None, "--config", "-c", help="Path to YAML experiment config"),
     dataset: Optional[str] = typer.Option(None, "--dataset", "-d", help="Path to CSV dataset"),
     target: Optional[str] = typer.Option(None, "--target", "-t", help="Target column name"),
-    models: str = typer.Option("lr,rf", "--models", "-m", help="Comma-separated models: lr,rf,xgb"),
+    models: str = typer.Option("logistic_regression,random_forest", "--models", "-m", help="Comma-separated models: logistic_regression,random_forest,xgboost (short aliases lr,rf,xgb supported)"),
     missing: str = typer.Option("fill_mean", "--missing", help="Missing value strategy: fill_mean or drop"),
     seed: int = typer.Option(42, "--seed", "-s", help="Random seed for reproducibility"),
     test_size: float = typer.Option(0.2, "--test-size", help="Test split ratio"),
@@ -111,6 +113,86 @@ def run(
 
     if output:
         _export_json(results, output)
+
+
+@app.command()
+def history(
+    latest: bool = typer.Option(False, "--latest", "-l", help="Show only the latest run"),
+):
+    """
+    Show experiment run history.
+    """
+    if latest:
+        run = HistoryManager.get_latest_run()
+        if run is None:
+            typer.echo("No runs found.")
+            return
+        _show_run_detail(run)
+        return
+
+    runs = HistoryManager.list_runs()
+    if not runs:
+        typer.echo("No runs found.")
+        return
+
+    typer.echo(f"{'RUN ID':<25}{'DATE':<28}{'DATASET':<20}{'WINNER'}")
+    typer.echo("-" * 90)
+    for run in runs:
+        ts = run["timestamp"][:19] if run["timestamp"] else ""
+        ds = run.get("dataset", "")[-20:]
+        winner = run.get("winner", "")
+        typer.echo(f"{run['run_id']:<25}{ts:<28}{ds:<20}{winner}")
+
+
+def _show_run_detail(run):
+    typer.echo(f"Run ID:         {run['run_id']}")
+    typer.echo(f"Date:           {run['timestamp'][:19] if run['timestamp'] else ''}")
+    typer.echo(f"Rival Version:  {run.get('rival_version', '')}")
+    typer.echo(f"Dataset:        {run.get('dataset', '')}")
+    typer.echo(f"Target:         {run.get('target', '')}")
+    typer.echo(f"Primary Metric: {run.get('primary_metric', '')}")
+    typer.echo(f"Winner:         {run.get('winner', '')}")
+    typer.echo(f"Models:         {', '.join(run.get('models', []))}")
+    typer.echo()
+    typer.echo("Metrics:")
+
+    col_width = 12
+    metrics = run.get("metrics", {})
+    if metrics:
+        header = f"{'MODEL':<22}" + f"{'ACC':<{col_width}}{'PREC':<{col_width}}{'REC':<{col_width}}{'F1':<{col_width}}{'LATENCY'}"
+        sep = "-" * (22 + col_width * 4 + 10)
+        typer.echo(sep)
+        typer.echo(header)
+        typer.echo(sep)
+        for model_name, m in metrics.items():
+            typer.echo(
+                f"{model_name:<22}"
+                f"{m['accuracy']:<{col_width}.4f}"
+                f"{m['precision']:<{col_width}.4f}"
+                f"{m['recall']:<{col_width}.4f}"
+                f"{m['f1']:<{col_width}.4f}"
+                f"{m['latency_ms']}ms"
+            )
+        typer.echo(sep)
+
+
+@app.command()
+def leaderboard(
+    metric: str = typer.Option("f1", "--metric", "-m", help="Metric to rank by: accuracy, precision, recall, f1"),
+):
+    """
+    Show leaderboard of best model scores from run history.
+    """
+    ranked = compute_leaderboard(metric=metric)
+    if not ranked:
+        typer.echo("No runs found.")
+        return
+
+    metric_label = METRIC_LABELS.get(metric, metric.upper())
+    typer.echo(f"{'MODEL':<25}{'BEST ' + metric_label}")
+    typer.echo("-" * 45)
+    for model_name, score in ranked:
+        typer.echo(f"{model_name:<25}{score:.4f}")
 
 
 if __name__ == "__main__":
